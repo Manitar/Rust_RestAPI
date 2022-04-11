@@ -1,0 +1,12 @@
+[development]
+address = "localhost"
+port = 3000
+
+[staging]
+address = "localhost"
+port = 3000
+
+
+[production]
+address = "localhost"
+port = 3000

@@ -18,7 +18,14 @@ pub struct People {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Person {
-    id: String,
+    id: Option<String>,
+    name: String,
+    email: String,
+    favoriteProgrammingLanguage: String 
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PersonRaw {
     name: String,
     email: String,
     favoriteProgrammingLanguage: String 
@@ -103,7 +110,7 @@ pub fn fetch_person(id: i64) -> Result<Json<People>, String> {
 }
 
 
-pub fn add_person(person:Json<Person>, id: String) -> Result<Json<StatusMessage>, String> {
+pub fn add_person(person:Json<PersonRaw>) -> Result<Json<StatusMessage>, String> {
     
     //connection
     let db_connection = match Connection::open("data.sqlite") {
@@ -115,18 +122,17 @@ pub fn add_person(person:Json<Person>, id: String) -> Result<Json<StatusMessage>
 
 
     let mut statement =
-        match db_connection.prepare("insert into people (id, name, email, favoriteProgrammingLanguage) values (?1, ?2 ,?3 ,?4);") {
+        match db_connection.prepare("insert into people (name, email, favoriteProgrammingLanguage) values (?1, ?2 ,?3);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
     let add_person = person.0;
-    let string_id = &id.to_string();
-    let name = add_person.name;
-    let email = add_person.email;
-    let favoriteProgrammingLanguage = add_person.favoriteProgrammingLanguage;
+    let name = &add_person.name;
+    let email = &add_person.email;
+    let favoriteProgrammingLanguage = &add_person.favoriteProgrammingLanguage;
 
-    let results = statement.execute([string_id.to_string(), name.to_string(),
+    let results = statement.execute([name.to_string(),
     email.to_string(), favoriteProgrammingLanguage.to_string()]);
 
     match results {

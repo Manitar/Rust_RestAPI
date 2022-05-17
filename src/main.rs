@@ -7,6 +7,7 @@ use serde::Serialize;
 
 mod Person;
 use crate::Person::Person as OtherPerson;
+use crate::Person::PersonRaw as OtherPersonRaw;
 use crate::Person::People;
 use crate::Person::StatusMessage;
 
@@ -19,10 +20,6 @@ use crate::Task::Tasks;
 use crate::Task::GenericTasks;
 
 
-enum Any_Task {OtherTask, OtherChore, OtherHomework}
-
-static mut people_id: i64 = -1;
-static mut tasks_id: i64 = -1;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -83,30 +80,24 @@ fn get_task_ownerId(id: i64) -> Result<Json<[String;1]>, String> {
 
 
 #[post("/people", format = "json", data = "<person>")]  
-fn add_person(person:Json<OtherPerson>)  -> Result<Json<StatusMessage>, String> {
-    unsafe{
-        people_id+=1;
-        let string_id = people_id.to_string();
-        Person::add_person(person, string_id) 
-    }
+fn add_person(person:Json<OtherPersonRaw>)  -> Result<Json<StatusMessage>, String> {
+
+    Person::add_person(person) 
     
 }
 
 #[post("/people/<owner_id>/tasks", format = "json", data = "<task>")]
 fn add_task(owner_id: i64, task: Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
-    unsafe{
-        tasks_id+=1;
-        let string_id = tasks_id.to_string();
-        if task.0.len() == 2 {
-            Task::add_task_to_person(owner_id, task, string_id)
-        }
-        else if task.len() == 4 {
-            Task::add_chore_to_person(owner_id, task, string_id)
-        }
-        else /* task.len() == 5 OR invalid */ {
-            Task::add_homework_to_person(owner_id, task, string_id)
-        }
+    if task.0.len() == 2 {
+        Task::add_task_to_person(owner_id, task)
     }
+    else if task.len() == 4 {
+        Task::add_chore_to_person(owner_id, task)
+    }
+    else /* task.len() == 5 OR invalid */ {
+        Task::add_homework_to_person(owner_id, task)
+    }
+
 
 }
 
@@ -150,10 +141,11 @@ fn main() {
         db_connection
             .execute(
                 "create table if not exists people (
-                    id TEXT PRIMARY KEY,
+                    id INTEGER AUTO_INCREMENT NOT NULL,
                     name TEXT NOT NULL,
                     email TEXT NOT NULL UNIQUE,
-                    favoriteProgrammingLanguage TEXT NOT NULL
+                    favoriteProgrammingLanguage TEXT NOT NULL,
+					PRIMARY KEY(id)
                 );",
                 rusqlite::NO_PARAMS,
             )
@@ -163,7 +155,7 @@ fn main() {
             db_connection
             .execute("
                 create table if not exists tasks (
-                    id TEXT PRIMARY KEY,
+                    id INTEGER AUTO_INCREMENT NOT NULL,
                     ownerId TEXT,
                     type TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -172,6 +164,7 @@ fn main() {
                     course TEXT,
                     dueDate TEXT,
                     details TEXT,
+                    PRIMARY KEY(id),
                     FOREIGN KEY(ownerId) REFERENCES people(id)
                 );",
                 rusqlite::NO_PARAMS,

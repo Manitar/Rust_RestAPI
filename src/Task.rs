@@ -2,7 +2,7 @@
 use rocket_contrib::json::Json;
 use rusqlite::Connection;
 use serde::Serialize;
-use serde::Deserialize;
+use serde::Deserialize; 
 
 use crate::Person::StatusMessage;
 
@@ -321,7 +321,7 @@ pub fn put_ownerId(id: i64, ownerId: Json<[String;1]>) -> Result<Json<StatusMess
     Ok(Json(StatusMessage { message: "finished!".to_string()}))
 }
 
-pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> Result<Json<StatusMessage>, String> {
+pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
     
     //connection
     let db_connection = match Connection::open("data.sqlite") {
@@ -332,14 +332,13 @@ pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> 
     };
 
     let mut statement =
-        match db_connection.prepare("insert into tasks (ownerId, id, type, status) 
-        values (?1, ?2, ?3, ?4);") {
+        match db_connection.prepare("insert into tasks (ownerId, type, status) 
+        values (?1, ?2, ?3);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
     let add_task = task;
-    let string_id = &id.to_string();
     let task_type = &add_task[0];
     let status = &add_task[1];
 
@@ -350,7 +349,7 @@ pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> 
     // let details = NULL;
     
 
-    let results = statement.execute([owner_id.to_string(), string_id.to_string(), task_type.to_string(), status.to_string()]);
+    let results = statement.execute([owner_id.to_string(), task_type.to_string(), status.to_string()]);
 
     match results {
         Ok(rows_affected) => Ok(Json(StatusMessage {
@@ -361,7 +360,7 @@ pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> 
 
 }
 
-pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> Result<Json<StatusMessage>, String> {
+pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
     
     //connection
     let db_connection = match Connection::open("data.sqlite") {
@@ -372,14 +371,13 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) ->
     };
 
     let mut statement =
-        match db_connection.prepare("insert into tasks (ownerId, id, status, description, size) 
-        values (?1, ?2, ?3, ?4, ?5);") {
+        match db_connection.prepare("insert into tasks (ownerId, status, description, size) 
+        values (?1, ?2, ?3, ?4);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
     let add_task = task;
-    let string_id = &id.to_string();
     let task_type = &add_task[0];
     let status = &add_task[1];
 
@@ -390,7 +388,7 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) ->
     // let dueDate = NULL;
     // let details = NULL;
     
-    let results = statement.execute([owner_id.to_string(), id.to_string(), status.to_string(),
+    let results = statement.execute([owner_id.to_string(), status.to_string(),
     task_type.to_string(), description.to_string(), size.to_string()]);
 
     match results {
@@ -402,7 +400,7 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) ->
 
 }
 
-pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>, id: String) -> Result<Json<StatusMessage>, String> {
+pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
     //connection
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection,
@@ -413,13 +411,12 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>, id: String)
 
     let mut statement =
         match db_connection.prepare("insert into tasks (ownerId, id, status, course, dueDate, details)
-         values (?1, ?2, ?3, ?4, ?5, ?6);") {
+         values (?1, ?2, ?3, ?4, ?5);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
     let add_task = task;
-    let string_id = &id.to_string();
     let task_type = &add_task[0];
     let status = &add_task[1];
 
@@ -430,7 +427,7 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>, id: String)
     let dueDate = &add_task[3];
     let details = &add_task[4];
     
-    let results = statement.execute([owner_id.to_string(), id.to_string(), status.to_string(),
+    let results = statement.execute([owner_id.to_string(), status.to_string(),
     task_type.to_string(), course.to_string(), dueDate.to_string(), details.to_string()]);
 
     match results {

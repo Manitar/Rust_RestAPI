@@ -8,3 +8,6 @@ Instructions on how to run:
 
 When I write id, type in the actual id used in the objects. Person id for people/id, task id for tasks/id
  
+To do list:
+1) Figure out the correct syntax to add JSON into database.
+2) Add Homework, Chore and implement them correctly.

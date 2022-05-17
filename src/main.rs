@@ -12,7 +12,17 @@ use crate::Person::StatusMessage;
 
 mod Task;
 use crate::Task::Task as OtherTask;
+use crate::Task::Chore as OtherChore;
+use crate::Task::Homework as OtherHomework;
+use crate::Task::GenericTask as OtherGenericTask;
 use crate::Task::Tasks;
+use crate::Task::GenericTasks;
+
+
+enum Any_Task {OtherTask, OtherChore, OtherHomework}
+
+static mut people_id: i64 = -1;
+static mut tasks_id: i64 = -1;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -34,11 +44,20 @@ fn fetch_person(id: i64) -> Result<Json<OtherPerson>, String> {
     }
 }
 
+// #[get("/people/<id>/tasks")]
+// fn get_tasks_of_person(id: i64) -> Result<Json<OtherTask>, String> {
+//     let task = Task::fetch_task_by_person(id);
+//     match task{
+//         Ok(jsonTask) => { Ok(Json((jsonTask.0.tasks)[0].clone()))   },
+//         Err(_) => Err("Failed to create task".into())
+//     }
+// }
+
 #[get("/people/<id>/tasks")]
-fn get_tasks_of_person(id: i64) -> Result<Json<OtherTask>, String> {
-    let task = Task::fetch_task_by_person(id);
+fn get_tasks_of_person(id: i64) -> Result<Json<OtherGenericTask>, String> {
+    let task = Task::fetch_task_by_person_generic(id);
     match task{
-        Ok(jsonTask) => { Ok(Json((jsonTask.0.tasks)[0].clone()))   },
+        Ok(jsonTask) => { Ok(Json((jsonTask.0.generic_tasks)[0].clone()))   },
         Err(_) => Err("Failed to create task".into())
     }
 }
@@ -64,13 +83,30 @@ fn get_task_ownerId(id: i64) -> Result<Json<[String;1]>, String> {
 
 
 #[post("/people", format = "json", data = "<person>")]  
-fn add_person(person:Json<[String;4]>)  -> Result<Json<StatusMessage>, String> {
-    Person::add_person(person) 
+fn add_person(person:Json<OtherPerson>)  -> Result<Json<StatusMessage>, String> {
+    unsafe{
+        people_id+=1;
+        let string_id = people_id.to_string();
+        Person::add_person(person, string_id) 
+    }
+    
 }
 
 #[post("/people/<owner_id>/tasks", format = "json", data = "<task>")]
-fn add_task(owner_id: i64, task: Json<[String;2]>) -> Result<Json<StatusMessage>, String> {
-    Task::add_task_to_person(owner_id, task)
+fn add_task(owner_id: i64, task: Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
+    unsafe{
+        tasks_id+=1;
+        let string_id = tasks_id.to_string();
+        if task.0.len() == 2 {
+            Task::add_task_to_person(owner_id, task, string_id)
+        }
+        else if task.len() == 4 {
+            Task::add_chore_to_person(owner_id, task, string_id)
+        }
+        else /* task.len() == 5 OR invalid */ {
+            Task::add_homework_to_person(owner_id, task, string_id)
+        }
+    }
 
 }
 
@@ -123,18 +159,26 @@ fn main() {
             )
             .unwrap();
 
+            // Generic table for all 3 data types
             db_connection
             .execute("
                 create table if not exists tasks (
                     id TEXT PRIMARY KEY,
                     ownerId TEXT,
+                    type TEXT NOT NULL,
                     status TEXT NOT NULL,
+                    description TEXT,
+                    size TEXT,
+                    course TEXT,
+                    dueDate TEXT,
+                    details TEXT,
                     FOREIGN KEY(ownerId) REFERENCES people(id)
                 );",
                 rusqlite::NO_PARAMS,
             )
             .unwrap();
     }
+
 
     rocket::ignite()
         .mount(

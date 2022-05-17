@@ -18,7 +18,7 @@ pub struct People {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Person {
-    id: Option<String>,
+    id: Option<i64>,
     name: String,
     email: String,
     favoriteProgrammingLanguage: String 

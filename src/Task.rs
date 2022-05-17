@@ -15,7 +15,7 @@ pub struct Tasks{
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Task{
-    id: String,
+    id: Option<i64>,
     ownerId: String,
     status: String, //Active or Done
 }

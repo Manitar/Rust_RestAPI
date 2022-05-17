@@ -141,11 +141,10 @@ fn main() {
         db_connection
             .execute(
                 "create table if not exists people (
-                    id INTEGER AUTO_INCREMENT NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     email TEXT NOT NULL UNIQUE,
-                    favoriteProgrammingLanguage TEXT NOT NULL,
-					PRIMARY KEY(id)
+                    favoriteProgrammingLanguage TEXT NOT NULL
                 );",
                 rusqlite::NO_PARAMS,
             )
@@ -155,7 +154,7 @@ fn main() {
             db_connection
             .execute("
                 create table if not exists tasks (
-                    id INTEGER AUTO_INCREMENT NOT NULL,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ownerId TEXT,
                     type TEXT NOT NULL,
                     status TEXT NOT NULL,
@@ -164,7 +163,6 @@ fn main() {
                     course TEXT,
                     dueDate TEXT,
                     details TEXT,
-                    PRIMARY KEY(id),
                     FOREIGN KEY(ownerId) REFERENCES people(id)
                 );",
                 rusqlite::NO_PARAMS,

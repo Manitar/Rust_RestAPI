@@ -10,7 +10,7 @@ When I write id, type in the actual id used in the objects. Person id for people
  
 To do list:
 1) Make Raw structs for each struct needed (Raw = no id, regular = yes id). Serde deserialize anyone needed.
-2) Change functions in main to get Json<TaskRaw> instead of Json<Vec<String>>.
+2) Change functions in main to get Json < TaskRaw > instead of Json<Vec<String>>.
 3) Generalize a task struct to get all possible features.
  
 Swagger link:

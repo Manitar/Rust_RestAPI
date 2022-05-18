@@ -51,6 +51,18 @@ pub struct Tasks{
     pub tasks: Vec<Task>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TaskPatch{
+    #[serde(rename = "type")]
+    task_type: Option<TaskType>,
+    status: Option<String>, //Active or Done
+    description: Option<String>,
+    size: Option<String>, //Small, Medium or Large
+    course: Option<String>,
+    dueDate: Option<String>, // Date
+    details: Option<String>,
+}
+
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub enum TaskType {

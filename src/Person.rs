@@ -31,6 +31,7 @@ pub struct PersonRaw {
     favoriteProgrammingLanguage: String 
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PersonPatch {
     name: Option<String>,
     email: Option<String>,
@@ -161,27 +162,43 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
         }
     };
     let change_person = person.0;
+
     let check_name = change_person.name;
     let check_email = change_person.email;
     let check_favoriteProgrammingLanguage = change_person.favoriteProgrammingLanguage;
 
+    let check_name_flag = true;
+    let check_email_flag = true;
+    let check_favoriteProgrammingLanguage_flag = true;
+
+    let name =
     match check_name {
-        Some(t) => 
-            let mut statement =
-            match db_connection.prepare("UPDATE people SET name = (?1) WHERE id = (?2); ") {
-                Ok(statement) => statement,
-                Err(_) => return Err("Failed to prepare query".into()),
-            },
-        None => ""
+        Some(t) => t,
+        None => {check_name_flag = false; "".to_string()},
     };
-    if !check1.eq("") {
+
+    let email =
+    match check_email {
+        Some(t) => t,
+        None => {check_email_flag = false; "".to_string()},
+    };
+
+    let favoriteProgrammingLanguage =
+    match check_favoriteProgrammingLanguage {
+        Some(t) => t,
+        None => {check_favoriteProgrammingLanguage_flag = false; "".to_string()},
+    };
+
+
+
+    if check_name_flag {
         let mut statement =
         match db_connection.prepare("UPDATE people SET name = (?1) WHERE id = (?2); ") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute([check1,&id.to_string()]);
+        let results = statement.execute([name.to_string() , id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {
@@ -190,14 +207,14 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
             Err(err) => Err(format!("{:?}", err))   
         };
     }
-    if !check2.eq("") {
+    if check_email_flag {
         let mut statement =
         match db_connection.prepare("UPDATE people SET email = (?1) WHERE id = (?2); ") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute([check2,&id.to_string()]);
+        let results = statement.execute([email.to_string(), id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {
@@ -206,14 +223,14 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
             Err(err) => Err(format!("{:?}", err))   
         };
     }
-    if !check3.eq("") {
+    if check_favoriteProgrammingLanguage_flag {
         let mut statement =
         match db_connection.prepare("UPDATE people SET favoriteProgrammingLanguage = (?1) WHERE id = (?2); ") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute([check3,&id.to_string()]);
+        let results = statement.execute([favoriteProgrammingLanguage.to_string(), id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {

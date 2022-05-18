@@ -14,8 +14,9 @@ use crate::Person::StatusMessage;
 
 mod Task;
 use crate::Task::Task as OtherTask;
-use crate::Task::TaskType;
 use crate::Task::TaskRaw as OtherTaskRaw;
+use crate::Task::TaskPatch as OtherTaskPatch;
+use crate::Task::TaskType;
 use crate::Task::Tasks;
 
 
@@ -117,7 +118,7 @@ fn change_person(id:i64 ,person:Json<OtherPersonPatch>)  -> Result<Json<StatusMe
 }
 
 #[patch("/tasks/<id>", format ="json", data= "<task>")]
-fn change_task(id:i64, task:Json<Vec<String>>)  -> Result<Json<StatusMessage>, String> {
+fn change_task(id:i64, task:Json<OtherTaskPatch>)  -> Result<Json<StatusMessage>, String> {
     Task::change_task(id, task) 
 }
 

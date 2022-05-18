@@ -167,26 +167,26 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
     let check_email = change_person.email;
     let check_favoriteProgrammingLanguage = change_person.favoriteProgrammingLanguage;
 
-    let check_name_flag = true;
-    let check_email_flag = true;
-    let check_favoriteProgrammingLanguage_flag = true;
+    let check_name_flag = false;
+    let check_email_flag = false;
+    let check_favoriteProgrammingLanguage_flag = false;
 
     let name =
     match check_name {
-        Some(t) => t,
-        None => {check_name_flag = false; "".to_string()},
+        Some(t) => {check_name_flag = true; t},
+        None =>  "".to_string(),
     };
 
     let email =
     match check_email {
-        Some(t) => t,
-        None => {check_email_flag = false; "".to_string()},
+        Some(t) => {check_email_flag = true; t},
+        None =>  "".to_string(),
     };
 
     let favoriteProgrammingLanguage =
     match check_favoriteProgrammingLanguage {
-        Some(t) => t,
-        None => {check_favoriteProgrammingLanguage_flag = false; "".to_string()},
+        Some(t) => {check_favoriteProgrammingLanguage_flag = true; t},
+        None =>  "".to_string(),
     };
 
 

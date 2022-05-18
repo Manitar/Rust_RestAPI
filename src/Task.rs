@@ -481,7 +481,7 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<
 }
 
 
-pub fn change_task(id:i64, task:Json<[String;2]>)  -> Result<Json<StatusMessage>, String> {
+pub fn change_task(id:i64, task:Json<TaskPatch>)  -> Result<Json<StatusMessage>, String> {
     //connection
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection,
@@ -489,17 +489,101 @@ pub fn change_task(id:i64, task:Json<[String;2]>)  -> Result<Json<StatusMessage>
             return Err(String::from("Failed to connect to database"));
         }
     };
-    let changearray = task;
-    let check1 = &changearray[0];
-    let check2 = &changearray[1];
-    if !check1.eq("") {
+    let change_task = task.0;
+
+    // task_type: Option<TaskType>,
+    // status: Option<String>, //Active or Done
+    // description: Option<String>,
+    // size: Option<String>, //Small, Medium or Large
+    // course: Option<String>,
+    // dueDate: Option<String>, // Date
+    // details: Option<String>,
+
+    let check_task_type = change_task.task_type;
+    let check_status = change_task.status;
+
+    let check_description = change_task.description;
+    let check_size = change_task.size;
+
+    let check_course = change_task.course;
+    let check_dueDate = change_task.dueDate;
+    let check_details = change_task.details;
+
+    let check_task_type_flag = false;
+    let check_status_flag = false;
+
+    let check_description_flag = false;
+    let check_size_flag = false;
+
+    let check_course_flag = false;
+    let check_dueDate_flag = false;
+    let check_details_flag = false;
+
+
+    let task_type =
+    match check_task_type {
+        Some(t) => {check_task_type_flag = true; 
+            match t {
+            TaskType::Task => "Task".to_string(),
+            TaskType::Chore => "Chore".to_string(),
+            TaskType::Homework => "Homework".to_string(),}
+        },
+        None => "".to_string(),
+    };
+
+    let status =
+    match check_status {
+        Some(t) => {check_status_flag = true; t},
+        None => "".to_string(),
+    };
+
+    let description =
+    match check_description {
+        Some(t) => {check_description_flag = true; t},
+        None => "".to_string()
+    };
+
+    let size =
+    match check_size {
+        Some(t) => {check_size_flag = true; t},
+        None => "".to_string()
+    };
+
+    let course =
+    match check_course {
+        Some(t) => {check_course_flag = true; t},
+        None => "".to_string()
+    };
+
+    let dueDate =
+    match check_dueDate {
+        Some(t) => {check_dueDate_flag = true; t},
+        None => "".to_string()
+    };
+
+    let details =
+    match check_details {
+        Some(t) => {check_details_flag = true; t},
+        None => "".to_string()
+    };
+
+    // Update: task_type, status. Nullify: description, size, course, dueDate, details
+    if task_type == "Task"{
+
+    }
+
+    if task_type == "Chore"{
+
+    }
+
+    if check_task_type_flag{
         let mut statement =
         match db_connection.prepare("UPDATE tasks SET ownerId = (?1) WHERE id = (?2); ") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute([check1,&id.to_string()]);
+        let results = statement.execute([task_type.to_string(), id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {

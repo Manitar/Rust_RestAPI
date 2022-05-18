@@ -9,12 +9,42 @@ Instructions on how to run:
 When I write id, type in the actual id used in the objects. Person id for people/id, task id for tasks/id
  
 To do list:
-1) Make Raw structs for each struct needed (Raw = no id, regular = yes id). Serde deserialize anyone needed.
-2) Change functions in main to get Json < TaskRaw > instead of Json<Vec<String>>.
-3) Generalize a task struct to get all possible features.
+1) Finish Task Patch, don't forget to divide into Task, Chore and Homework, to stay true to them.
+2) Check what other functions are left, and tests everything in postman.
+3) Make macros for repeating things: Connection and such.
+4) Make enums for Status, Size.
+5) Case sensitivity for Chore, Task, Homework.
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default
+
+JSONs to work with:
+
+POST: http://localhost:3000/api/people
+{
+  "name": "D. J. Wheeler",
+  "email": "djw@ESDAC.uk",
+  "favoriteProgrammingLanguage": "EDSAC Assembly"
+}
+
+POST: http://localhost:3000/api/people/<ID>/tasks
+{
+  "type": "Chore",
+  "status": "Active",
+  "description": "Buy milk.",
+  "size": "Large"
+}
+
+POST: http://localhost:3000/api/people/<ID>/tasks
+{
+  "type": "Homework",
+  "status": "Active",
+  "course": "Logics",
+  "dueDate": "10/5/2021",
+  "details": "Very good"
+}
+
+
 
 
 

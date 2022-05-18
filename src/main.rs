@@ -13,9 +13,9 @@ use crate::Person::StatusMessage;
 
 mod Task;
 use crate::Task::Task as OtherTask;
-use crate::Task::Chore as OtherChore;
-use crate::Task::Homework as OtherHomework;
+use crate::Task::TaskType;
 use crate::Task::GenericTask as OtherGenericTask;
+use crate::Task::GenericTaskRaw as OtherGenericTaskRaw;
 use crate::Task::Tasks;
 use crate::Task::GenericTasks;
 
@@ -60,10 +60,10 @@ fn get_tasks_of_person(id: i64) -> Result<Json<OtherGenericTask>, String> {
 }
 
 #[get("/tasks/<id>")]
-fn get_task(id: i64) -> Result<Json<OtherTask>, String> {
+fn get_task(id: i64) -> Result<Json<OtherGenericTask>, String> {
     let task = Task::fetch_task_by_id(id);
     match task{
-        Ok(jsonTask) => { Ok(Json((jsonTask.0.tasks)[0].clone()))   },
+        Ok(jsonTask) => { Ok(Json((jsonTask.0.generic_tasks)[0].clone()))   },
         Err(_) => Err("Failed to create task".into())
     }
 }
@@ -87,17 +87,21 @@ fn add_person(person:Json<OtherPersonRaw>)  -> Result<Json<StatusMessage>, Strin
 }
 
 #[post("/people/<owner_id>/tasks", format = "json", data = "<task>")]
-fn add_task(owner_id: i64, task: Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
-    if task.0.len() == 2 {
-        Task::add_task_to_person(owner_id, task)
-    }
-    else if task.len() == 4 {
-        Task::add_chore_to_person(owner_id, task)
-    }
-    else /* task.len() == 5 OR invalid */ {
-        Task::add_homework_to_person(owner_id, task)
-    }
+fn add_task(owner_id: i64, task: Json<OtherGenericTaskRaw>) -> Result<Json<StatusMessage>, String> {
 
+    match Task::get_type(&task.0) {
+        TaskType::Task => {
+            Task::add_task_to_person(owner_id, task)
+        }
+
+        TaskType::Chore => {
+            Task::add_chore_to_person(owner_id, task)
+        }
+
+        TaskType::Homework => {
+            Task::add_homework_to_person(owner_id, task)
+        }
+    }
 
 }
 
@@ -156,7 +160,7 @@ fn main() {
                 create table if not exists tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ownerId TEXT,
-                    type TEXT NOT NULL,
+                    task_type TEXT NOT NULL,
                     status TEXT NOT NULL,
                     description TEXT,
                     size TEXT,

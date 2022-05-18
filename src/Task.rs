@@ -1,6 +1,10 @@
 
 use rocket_contrib::json::Json;
 use rusqlite::Connection;
+use rusqlite::types::FromSql;
+use rusqlite::types::FromSqlError;
+use rusqlite::types::FromSqlResult;
+use rusqlite::types::ValueRef;
 use serde::Serialize;
 use serde::Deserialize; 
 
@@ -20,42 +24,76 @@ pub struct Task{
     status: String, //Active or Done
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GenericTask{
     id: String,
     ownerId: String,
+    #[serde(rename = "type")]
+    task_type: TaskType,
+    status: Option<String>, //Active or Done
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    size: Option<String>, //Small, Medium or Large
+    #[serde(skip_serializing_if = "Option::is_none")]
+    course: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dueDate: Option<String>, // Date
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details: Option<String>,
+}
+
+
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GenericTaskRaw{
+    #[serde(rename = "type")]
+    task_type: TaskType,
     status: String, //Active or Done
-    description: String,
-    size: String, //Small, Medium or Large
-    course: String,
-    dueDate: String, // Date
-    details: String,
+    description: Option<String>,
+    size: Option<String>, //Small, Medium or Large
+    course: Option<String>,
+    dueDate: Option<String>, // Date
+    details: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct GenericTasks{
     pub generic_tasks: Vec<GenericTask>,
 }
-pub struct Chore{
-    id: String,
-    ownerId: String,
-    status: String, //Active or Done
-    description: String,
-    size: String, //Small, Medium or Large
+
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub enum TaskType {
+    Task,
+    Chore,
+    Homework,
 }
 
-pub struct Homework{
-    id: String,
-    ownerId: String,
-    status: String, //Active or Done
-    course: String,
-    dueDate: String, // Date
-    details: String,
+impl FromSql for TaskType {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let bytes = match value {
+            ValueRef::Text(bytes) => bytes,
+            other => return Err(FromSqlError::InvalidType),
+        };
+        
+        let task_type = match bytes {
+            b"Task" => TaskType::Task,
+            b"Chore" => TaskType::Chore,
+            b"Homework" => TaskType::Homework,
+            other => return Err(FromSqlError::InvalidType),
+        };
+
+        Ok(task_type)
+    }
 }
 
-enum E { Task, Homework, Chore, Tasks, GenericTasks } 
+pub fn get_type(task: &GenericTaskRaw) -> TaskType {
+    return task.task_type;
+}
 
-pub fn fetch_task_by_id(id: i64) -> Result<Json<Tasks>, String> {
+
+pub fn fetch_task_by_id(id: i64) -> Result<Json<GenericTasks>, String> {
     //connect to sqllite
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection, //returns connection if success
@@ -71,26 +109,34 @@ pub fn fetch_task_by_id(id: i64) -> Result<Json<Tasks>, String> {
     };
 
     
-    let results = statement.query_map(rusqlite::NO_PARAMS, |row| { //creat a todo_item's from all the results
-    Ok(Task {
-        id: row.get(0)?,
-        ownerId: row.get(1)?,
-        status: row.get(2)?,
-         })
-    });
-
-    match results {
-        Ok(rows) =>{ 
-            let collection: rusqlite::Result<Vec<Task>> = rows.collect();
-
-            match collection {
-                Ok(tasks) => { Ok(Json(Tasks{tasks}))},
-                Err(_) => Err("Could not collect tasks".into()),
+    let results = statement.query_map(rusqlite::NO_PARAMS, |row| {
+        Ok(GenericTask {
+            id: row.get(0)?,
+            ownerId: row.get(1)?,
+            task_type: row.get(2)?,
+            status: row.get(3)?,
+            description: row.get(4)?,
+            size: row.get(5)?,
+            course: row.get(6)?,
+            dueDate: row.get(7)?,
+            details: row.get(8)?,
+             })
+        });
+    
+        
+    
+        match results {
+            Ok(rows) =>{ 
+                let collection: rusqlite::Result<Vec<GenericTask>> = rows.collect();
+    
+                match collection {
+                    Ok(generic_tasks) => { Ok(Json(GenericTasks{generic_tasks}))},
+                    Err(_) => Err("Could not collect tasks".into()),
+                }
             }
+                
+            Err(err) => Err(format!("{:?}", err))
         }
-            
-        Err(err) => Err(format!("{:?}", err))
-    }
 }
 
 pub fn fetch_task_by_person(id: i64) -> Result<Json<Tasks>, String> {
@@ -153,12 +199,13 @@ pub fn fetch_task_by_person_generic(id: i64) -> Result<Json<GenericTasks>, Strin
     Ok(GenericTask {
         id: row.get(0)?,
         ownerId: row.get(1)?,
-        status: row.get(2)?,
-        description: row.get(3)?,
-        size: row.get(4)?,
-        course: row.get(5)?,
-        dueDate: row.get(6)?,
-        details: row.get(7)?,
+        task_type: row.get(2)?,
+        status: row.get(3)?,
+        description: row.get(4)?,
+        size: row.get(5)?,
+        course: row.get(6)?,
+        dueDate: row.get(7)?,
+        details: row.get(8)?,
          })
     });
 
@@ -321,7 +368,7 @@ pub fn put_ownerId(id: i64, ownerId: Json<[String;1]>) -> Result<Json<StatusMess
     Ok(Json(StatusMessage { message: "finished!".to_string()}))
 }
 
-pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
+pub fn add_task_to_person(owner_id: i64, task:Json<GenericTaskRaw>) -> Result<Json<StatusMessage>, String> {
     
     //connection
     let db_connection = match Connection::open("data.sqlite") {
@@ -337,10 +384,9 @@ pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
-        
-    let add_task = task;
-    let task_type = &add_task[0];
-    let status = &add_task[1];
+
+    let task_type = &"Task".to_string();
+    let status = &task.status;
 
     // let description = NULL;
     // let size = NULL;
@@ -360,7 +406,7 @@ pub fn add_task_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<
 
 }
 
-pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
+pub fn add_chore_to_person(owner_id: i64, task:Json<GenericTaskRaw>) -> Result<Json<StatusMessage>, String> {
     
     //connection
     let db_connection = match Connection::open("data.sqlite") {
@@ -371,18 +417,26 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json
     };
 
     let mut statement =
-        match db_connection.prepare("insert into tasks (ownerId, status, description, size) 
-        values (?1, ?2, ?3, ?4);") {
+        match db_connection.prepare("insert into tasks (ownerId, status, type, description, size) 
+        values (?1, ?2, ?3, ?4, ?5);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
-    let add_task = task;
-    let task_type = &add_task[0];
-    let status = &add_task[1];
-
-    let description = &add_task[2];
-    let size = &add_task[3];
+    let task_type = &"Chore".to_string();
+    let status = &task.status;
+    
+    let description =
+        match &task.description {
+            Some(t) => t,
+            None => return Err("Incorrect data type sent".into()),
+        };
+    
+    let size =
+        match &task.size {
+            Some(t) => t,
+            None => return Err("Incorrect data type sent".into()),
+        };
 
     // let course = NULL;
     // let dueDate = NULL;
@@ -400,7 +454,7 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json
 
 }
 
-pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<Json<StatusMessage>, String> {
+pub fn add_homework_to_person(owner_id: i64, task:Json<GenericTaskRaw>) -> Result<Json<StatusMessage>, String> {
     //connection
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection,
@@ -410,22 +464,35 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<Vec<String>>) -> Result<J
     };
 
     let mut statement =
-        match db_connection.prepare("insert into tasks (ownerId, id, status, course, dueDate, details)
-         values (?1, ?2, ?3, ?4, ?5);") {
+        match db_connection.prepare("insert into tasks (ownerId, type, status, course, dueDate, details)
+         values (?1, ?2, ?3, ?4, ?5, ?6);") {
             Ok(statement) => statement,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
-    let add_task = task;
-    let task_type = &add_task[0];
-    let status = &add_task[1];
+    let task_type = &"Homework".to_string();
+    let status = &task.status;
 
     // let description = NULL;
     // let size = NULL;
+    
+    let course =
+        match &task.course {
+            Some(t) => t,
+            None => return Err("Incorrect data type sent".into()),
+        };
 
-    let course = &add_task[2];
-    let dueDate = &add_task[3];
-    let details = &add_task[4];
+    let dueDate =
+        match &task.dueDate {
+            Some(t) => t,
+            None => return Err("Incorrect data type sent".into()),
+        };
+
+    let details =
+        match &task.details {
+            Some(t) => t,
+            None => return Err("Incorrect data type sent".into()),
+        };
     
     let results = statement.execute([owner_id.to_string(), status.to_string(),
     task_type.to_string(), course.to_string(), dueDate.to_string(), details.to_string()]);

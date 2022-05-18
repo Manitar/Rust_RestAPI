@@ -11,6 +11,8 @@ When I write id, type in the actual id used in the objects. Person id for people
 To do list:
 1) Finish Task Patch, don't forget to divide into Task, Chore and Homework, to stay true to them.
 2) Check what other functions are left, and tests everything in postman.
+3) Make macros for repeating things: Connection and such.
+4) Make enums for Status, Size.
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default

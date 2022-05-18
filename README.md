@@ -9,5 +9,12 @@ Instructions on how to run:
 When I write id, type in the actual id used in the objects. Person id for people/id, task id for tasks/id
  
 To do list:
-1) Figure out the correct syntax to add JSON into database.
-2) Add Homework, Chore and implement them correctly.
+1) Make Raw structs for each struct needed (Raw = no id, regular = yes id). Serde deserialize anyone needed.
+2) Change functions in main to get Json < TaskRaw > instead of Json<Vec<String>>.
+3) Generalize a task struct to get all possible features.
+ 
+Swagger link:
+https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default
+
+
+

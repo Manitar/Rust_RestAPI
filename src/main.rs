@@ -8,16 +8,15 @@ use serde::Serialize;
 mod Person;
 use crate::Person::Person as OtherPerson;
 use crate::Person::PersonRaw as OtherPersonRaw;
+use crate::Person::PersonPatch as OtherPersonPatch;
 use crate::Person::People;
 use crate::Person::StatusMessage;
 
 mod Task;
 use crate::Task::Task as OtherTask;
 use crate::Task::TaskType;
-use crate::Task::GenericTask as OtherGenericTask;
-use crate::Task::GenericTaskRaw as OtherGenericTaskRaw;
+use crate::Task::TaskRaw as OtherTaskRaw;
 use crate::Task::Tasks;
-use crate::Task::GenericTasks;
 
 
 
@@ -51,30 +50,26 @@ fn fetch_person(id: i64) -> Result<Json<OtherPerson>, String> {
 // }
 
 #[get("/people/<id>/tasks")]
-fn get_tasks_of_person(id: i64) -> Result<Json<OtherGenericTask>, String> {
-    let task = Task::fetch_task_by_person_generic(id);
-    match task{
-        Ok(jsonTask) => { Ok(Json((jsonTask.0.generic_tasks)[0].clone()))   },
-        Err(_) => Err("Failed to create task".into())
-    }
+fn get_tasks_of_person(id: i64) -> Result<Json<Tasks>, String> {
+    Task::fetch_tasks_by_person(id)
 }
 
 #[get("/tasks/<id>")]
-fn get_task(id: i64) -> Result<Json<OtherGenericTask>, String> {
+fn get_task(id: i64) -> Result<Json<OtherTask>, String> {
     let task = Task::fetch_task_by_id(id);
     match task{
-        Ok(jsonTask) => { Ok(Json((jsonTask.0.generic_tasks)[0].clone()))   },
-        Err(_) => Err("Failed to create task".into())
+        Ok(jsonTask) => { Ok(Json((jsonTask.0.tasks)[0].clone()))   },
+        Err(why) => Err(format!("Failed to create task: {why}"))
     }
 }
 
 #[get("/tasks/<id>/status")]
-fn get_task_status(id: i64) -> Result<Json<[String;1]>, String> {
+fn get_task_status(id: i64) -> Result<Json<String>, String> {
     Task::fetch_status(id)
 }
 
 #[get("/tasks/<id>/owner")]
-fn get_task_ownerId(id: i64) -> Result<Json<[String;1]>, String> {
+fn get_task_ownerId(id: i64) -> Result<Json<String>, String> {
     Task::fetch_ownerId(id)
 }
 
@@ -87,7 +82,7 @@ fn add_person(person:Json<OtherPersonRaw>)  -> Result<Json<StatusMessage>, Strin
 }
 
 #[post("/people/<owner_id>/tasks", format = "json", data = "<task>")]
-fn add_task(owner_id: i64, task: Json<OtherGenericTaskRaw>) -> Result<Json<StatusMessage>, String> {
+fn add_task(owner_id: i64, task: Json<OtherTaskRaw>) -> Result<Json<StatusMessage>, String> {
 
     match Task::get_type(&task.0) {
         TaskType::Task => {
@@ -106,23 +101,23 @@ fn add_task(owner_id: i64, task: Json<OtherGenericTaskRaw>) -> Result<Json<Statu
 }
 
 #[put("/tasks/<id>/status", format = "json", data = "<status>")]
-fn put_status(id: i64, status: Json<[String;1]>) -> Result<Json<StatusMessage>, String> {
+fn put_status(id: i64, status: Json<String>) -> Result<Json<StatusMessage>, String> {
     Task::put_status(id, status)
 }
 
 #[put("/tasks/<id>/owner", format = "json", data = "<ownerId>")]
-fn put_ownerId(id: i64, ownerId: Json<[String;1]>) -> Result<Json<StatusMessage>, String> {
+fn put_ownerId(id: i64, ownerId: Json<String>) -> Result<Json<StatusMessage>, String> {
     Task::put_ownerId(id, ownerId)
 }
 
 
 #[patch("/people/<id>", format ="json", data= "<person>")] 
-fn change_person(id:i64 ,person:Json<[String;3]>)  -> Result<Json<StatusMessage>, String> {
+fn change_person(id:i64 ,person:Json<OtherPersonPatch>)  -> Result<Json<StatusMessage>, String> {
     Person::change_person(id,person) 
 }
 
 #[patch("/tasks/<id>", format ="json", data= "<task>")]
-fn change_task(id:i64, task:Json<[String;2]>)  -> Result<Json<StatusMessage>, String> {
+fn change_task(id:i64, task:Json<Vec<String>>)  -> Result<Json<StatusMessage>, String> {
     Task::change_task(id, task) 
 }
 
@@ -159,7 +154,7 @@ fn main() {
             .execute("
                 create table if not exists tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ownerId TEXT,
+                    ownerId INTEGER,
                     task_type TEXT NOT NULL,
                     status TEXT NOT NULL,
                     description TEXT,

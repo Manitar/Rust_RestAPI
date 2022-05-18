@@ -31,6 +31,12 @@ pub struct PersonRaw {
     favoriteProgrammingLanguage: String 
 }
 
+pub struct PersonPatch {
+    name: Option<String>,
+    email: Option<String>,
+    favoriteProgrammingLanguage: Option<String>
+}
+
 
 
 pub fn fetch_all_people() -> Result<Json<People>, String> {
@@ -146,7 +152,7 @@ pub fn add_person(person:Json<PersonRaw>) -> Result<Json<StatusMessage>, String>
 
 
 
-pub fn change_person(id:i64 ,person:Json<[String;3]>)  -> Result<Json<StatusMessage>, String> {
+pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMessage>, String> {
     //connection
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection,
@@ -154,10 +160,20 @@ pub fn change_person(id:i64 ,person:Json<[String;3]>)  -> Result<Json<StatusMess
             return Err(String::from("Failed to connect to database"));
         }
     };
-    let changearray = person;
-    let check1 = &changearray[0];
-    let check2 = &changearray[1];
-    let check3 = &changearray[2];
+    let change_person = person.0;
+    let check_name = change_person.name;
+    let check_email = change_person.email;
+    let check_favoriteProgrammingLanguage = change_person.favoriteProgrammingLanguage;
+
+    match check_name {
+        Some(t) => 
+            let mut statement =
+            match db_connection.prepare("UPDATE people SET name = (?1) WHERE id = (?2); ") {
+                Ok(statement) => statement,
+                Err(_) => return Err("Failed to prepare query".into()),
+            },
+        None => ""
+    };
     if !check1.eq("") {
         let mut statement =
         match db_connection.prepare("UPDATE people SET name = (?1) WHERE id = (?2); ") {

@@ -13,6 +13,7 @@ To do list:
 2) Check what other functions are left, and tests everything in postman.
 3) Make macros for repeating things: Connection and such.
 4) Make enums for Status, Size.
+5) Case sensitivity for Chore, Task, Homework.
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default

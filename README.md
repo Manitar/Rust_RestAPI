@@ -15,5 +15,33 @@ To do list:
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default
 
+JSONs to work with:
+
+POST: http://localhost:3000/api/people
+{
+  "name": "D. J. Wheeler",
+  "email": "djw@ESDAC.uk",
+  "favoriteProgrammingLanguage": "EDSAC Assembly"
+}
+
+POST: http://localhost:3000/api/people/<ID>/tasks
+{
+  "type": "Chore",
+  "status": "Active",
+  "description": "Buy milk.",
+  "size": "Large"
+}
+
+POST: http://localhost:3000/api/people/<ID>/tasks
+{
+  "type": "Homework",
+  "status": "Active",
+  "course": "Logics",
+  "dueDate": "10/5/2021",
+  "details": "Very good"
+}
+
+
+
 
 

@@ -36,7 +36,7 @@ fn fetch_all_people() -> Result<Json<People>, String> {
 fn fetch_person(id: i64) -> Result<Json<OtherPerson>, String> {
     let person = Person::fetch_person(id);
     match person{
-        Ok(jsonPeople) => {  Ok(Json((jsonPeople.0.people)[0].clone()))  }  ,
+        Ok(jsonPeople) => { if(jsonPeople.0.people.len() == 0) { return Err(format!("No such person")); } Ok(Json((jsonPeople.0.people)[0].clone()))   }  ,
         Err(_) => Err("Failed to create person".into())
     }
 }
@@ -59,7 +59,7 @@ fn get_tasks_of_person(id: i64) -> Result<Json<Tasks>, String> {
 fn get_task(id: i64) -> Result<Json<OtherTask>, String> {
     let task = Task::fetch_task_by_id(id);
     match task{
-        Ok(jsonTask) => { Ok(Json((jsonTask.0.tasks)[0].clone()))   },
+        Ok(jsonTask) => { if(jsonTask.0.tasks.len() == 0) { return Err(format!("No such task")); } Ok(Json((jsonTask.0.tasks)[0].clone()))   },
         Err(why) => Err(format!("Failed to create task: {why}"))
     }
 }
@@ -120,6 +120,7 @@ fn change_person(id:i64 ,person:Json<OtherPersonPatch>)  -> Result<Json<StatusMe
 #[patch("/tasks/<id>", format ="json", data= "<task>")]
 fn change_task(id:i64, task:Json<OtherTaskPatch>)  -> Result<Json<StatusMessage>, String> {
     Task::change_task(id, task) 
+
 }
 
 

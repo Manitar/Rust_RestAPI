@@ -9,11 +9,10 @@ Instructions on how to run:
 When I write id, type in the actual id used in the objects. Person id for people/id, task id for tasks/id
  
 To do list:
-1) Finish Task Patch, don't forget to divide into Task, Chore and Homework, to stay true to them.
-2) Check what other functions are left, and tests everything in postman.
-3) Make macros for repeating things: Connection and such.
-4) Make enums for Status, Size.
-5) Case sensitivity for Chore, Task, Homework.
+1) Check in postman: PATCH: All 9 different types, and the whole API.
+2) Make macros for repeating things: Connection and such.
+3) Make enums for Status, Size.
+4) Case sensitivity for Chore, Task, Homework??
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default

@@ -20,11 +20,11 @@ pub struct Task{
     ownerId: i64,
     #[serde(rename = "type")]
     task_type: TaskType,
-    status: String, //Active or Done
+    status: Status, //Active or Done
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    size: Option<String>, //Small, Medium or Large
+    size: Option<Size>, //Small, Medium or Large
     #[serde(skip_serializing_if = "Option::is_none")]
     course: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -39,9 +39,9 @@ pub struct Task{
 pub struct TaskRaw{
     #[serde(rename = "type")]
     task_type: TaskType,
-    status: String, //Active or Done
+    status: Status, //Active or Done
     description: Option<String>,
-    size: Option<String>, //Small, Medium or Large
+    size: Option<Size>, //Small, Medium or Large
     course: Option<String>,
     dueDate: Option<String>, // Date
     details: Option<String>,
@@ -56,9 +56,9 @@ pub struct Tasks{
 pub struct TaskPatch{
     #[serde(rename = "type")]
     task_type: Option<TaskType>,
-    status: Option<String>, //Active or Done
+    status: Option<Status>, //Active or Done
     description: Option<String>,
-    size: Option<String>, //Small, Medium or Large
+    size: Option<Size>, //Small, Medium or Large
     course: Option<String>,
     dueDate: Option<String>, // Date
     details: Option<String>,
@@ -70,6 +70,19 @@ pub enum TaskType {
     Task,
     Chore,
     Homework,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Status {
+    Active,
+    Done,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub enum Size {
+    Small,
+    Medium,
+    Large,
 }
 
 impl FromSql for TaskType {
@@ -89,8 +102,49 @@ impl FromSql for TaskType {
     }
 }
 
+impl FromSql for Status {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let bytes = match value {
+            ValueRef::Text(bytes) => {/*bytes.to_vec().make_ascii_lowercase();*/ bytes},
+            other => return Err(FromSqlError::InvalidType),
+        };
+        let status = match bytes {
+            b"Active" => Status::Active,
+            b"Done" => Status::Done,
+            other => return Err(FromSqlError::InvalidType),
+        };
+
+        Ok(status)
+    }
+}
+
+impl FromSql for Size {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let bytes = match value {
+            ValueRef::Text(bytes) => {/*bytes.to_vec().make_ascii_lowercase();*/ bytes},
+            other => return Err(FromSqlError::InvalidType),
+        };
+        let size = match bytes {
+            b"Small" => Size::Small,
+            b"Medium" => Size::Medium,
+            b"Large" => Size::Large,
+            other => return Err(FromSqlError::InvalidType),
+        };
+
+        Ok(size)
+    }
+}
+
 pub fn get_type(task: &TaskRaw) -> TaskType {
     return task.task_type;
+}
+
+pub fn get_status(task: &TaskRaw) -> Status {
+    return task.status;
+}
+
+pub fn get_size(task: &TaskRaw) -> Option<Size> {
+    return task.size;
 }
 
 pub fn type_to_string(task_type: TaskType) -> String {
@@ -99,6 +153,25 @@ pub fn type_to_string(task_type: TaskType) -> String {
         TaskType::Task => "Task".to_string(),
         TaskType::Chore => "Chore".to_string(),
         TaskType::Homework => "Homework".to_string()
+    }
+
+}
+
+pub fn status_to_string(status: Status) -> String {
+
+    match status{
+        Status::Active => "Active".to_string(),
+        Status::Done => "Done".to_string()
+    }
+}
+
+pub fn size_to_string(size: Option<Size>) -> Option<String> {
+ 
+    match size {
+        Some(Size::Small) => Some("Small".to_string()),
+        Some(Size::Medium) => Some("Medium".to_string()),
+        Some(Size::Large) => Some("Large".to_string()),
+        _ => None //If it's None
     }
 
 }
@@ -436,9 +509,9 @@ pub fn fetch_status(id: i64) -> Result<Json<String>, String> {
             match collection {
                 Ok(tasks) => { 
                     let task = &tasks[0];
-                    let status = &task.status;
+                    let status = task.status;
 
-                    Ok(Json(status.to_string())) }
+                    Ok(Json(status_to_string(status))) }
                 Err(_) => Err("Could not collect tasks".into()),
             }
         }
@@ -567,8 +640,8 @@ pub fn add_task_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<Stat
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-    let task_type = "Task".to_string();
-    let status = &task.status;
+    let task_type = type_to_string(task.task_type);
+    let status = status_to_string(task.status);
 
     // let description = NULL;
     // let size = NULL;
@@ -605,8 +678,8 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<Sta
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
-    let task_type = "Chore".to_string();
-    let status = &task.status;
+    let task_type = type_to_string(task.task_type);
+    let status = status_to_string(task.status);
     
     let description =
         match &task.description {
@@ -614,11 +687,11 @@ pub fn add_chore_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<Sta
             None => return Err("Incorrect data type sent".into()),
         };
     
-    let size =
-        match &task.size {
-            Some(t) => t,
-            None => return Err("Incorrect data type sent".into()),
-        };
+    let size_opt = size_to_string(task.size);
+    if size_opt == None {
+        return Err("No size field".to_string());
+    }
+    let size = size_opt.unwrap();
 
     // let course = NULL;
     // let dueDate = NULL;
@@ -652,8 +725,8 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
         
-    let task_type = "Homework".to_string();
-    let status = &task.status;
+    let task_type = type_to_string(task.task_type);
+    let status = status_to_string(task.status);
 
     // let description = NULL;
     // let size = NULL;
@@ -720,8 +793,8 @@ pub fn change_task(id:i64, patch:Json<TaskPatch>) -> Result<Json<StatusMessage>,
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute([&type_to_string(change.task_type) as &dyn ToSql, &change.status,
-        &change.description, &change.size, &change.course, &change.dueDate, &change.details, &id.to_string()]);
+        let results = statement.execute([&type_to_string(change.task_type) as &dyn ToSql, &status_to_string(change.status),
+        &change.description, &size_to_string(change.size), &change.course, &change.dueDate, &change.details, &id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {

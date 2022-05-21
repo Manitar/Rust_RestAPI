@@ -1,6 +1,7 @@
 
 use rocket_contrib::json::Json;
 use rusqlite::Connection;
+use rusqlite::ToSql;
 use rusqlite::types::FromSql;
 use rusqlite::types::FromSqlError;
 use rusqlite::types::FromSqlResult;
@@ -19,7 +20,7 @@ pub struct Task{
     ownerId: i64,
     #[serde(rename = "type")]
     task_type: TaskType,
-    status: Option<String>, //Active or Done
+    status: String, //Active or Done
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,10 +75,9 @@ pub enum TaskType {
 impl FromSql for TaskType {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         let bytes = match value {
-            ValueRef::Text(bytes) => bytes,
+            ValueRef::Text(bytes) => {/*bytes.to_vec().make_ascii_lowercase();*/ bytes},
             other => return Err(FromSqlError::InvalidType),
         };
-        
         let task_type = match bytes {
             b"Task" => TaskType::Task,
             b"Chore" => TaskType::Chore,
@@ -93,51 +93,219 @@ pub fn get_type(task: &TaskRaw) -> TaskType {
     return task.task_type;
 }
 
+pub fn type_to_string(task_type: TaskType) -> String {
+
+    match task_type{
+        TaskType::Task => "Task".to_string(),
+        TaskType::Chore => "Chore".to_string(),
+        TaskType::Homework => "Homework".to_string()
+    }
+
+}
+
+pub fn patch_by_case(Json(patch): Json<TaskPatch>, Json(existing_task): Json<Task>) -> Option<Task>{
+    //9 cases
+
+    let existing_type = existing_task.task_type.clone();
+    let patch_type = patch.task_type.clone();
+
+    //Existing = Task, Patch = Task;
+    if(existing_type == TaskType::Task && patch_type == Some(TaskType::Task) || patch_type == None){
+        return task_to_task(patch.clone(), existing_task.clone());
+    }
+    //Existing = Chore, Patch = Chore;
+    if(existing_type == TaskType::Chore && patch_type == Some(TaskType::Chore) || patch_type == None ){
+        return chore_to_chore(patch.clone(), existing_task.clone());
+    }
+    //Existing = Homework, Patch = Homework;
+    if(existing_type == TaskType::Homework && patch_type == Some(TaskType::Homework) || patch_type == None ){
+        return homework_to_homework(patch.clone(), existing_task.clone());
+    }
+    //Existing = Chore, Patch = Task;
+    if(existing_type == TaskType::Chore && patch_type == Some(TaskType::Task)){
+        return chore_to_task(patch.clone(), existing_task.clone());
+    }
+    //Existing = Chore, Patch = Homework;
+    if(existing_type == TaskType::Chore && patch_type == Some(TaskType::Homework)){
+        return chore_to_homework(patch.clone(), existing_task.clone());
+    }
+    //Existing = Homework, Patch = Task;
+    if(existing_type == TaskType::Homework && patch_type == Some(TaskType::Task)){
+        return homework_to_task(patch.clone(), existing_task.clone());
+    }
+     //Existing = Homework, Patch = Chore;
+    if(existing_type == TaskType::Homework && patch_type == Some(TaskType::Chore)){
+        return homework_to_chore(patch.clone(), existing_task.clone());
+    }
+
+    //Unreachable
+    return None;
 
 
-// pub fn fetch_task_by_id_2(id: i64) -> Option<Json<Task>> {
-//     //connect to sqllite
-//     let db_connection = match Connection::open("data.sqlite") {
-//         Ok(connection) => connection, //returns connection if success
-//         Err(_) => {return None;}
-//     };
+}
+
+pub fn task_to_task(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None || patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn chore_to_chore(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: patch.description.or(existing_task.description),
+        size: patch.size.or(existing_task.size),
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn homework_to_homework(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: patch.course.or(existing_task.course),
+        dueDate: patch.dueDate.or(existing_task.dueDate),
+        details: patch.details.or(existing_task.details)
+    });
+}
+
+pub fn chore_to_task(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None || patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: patch.task_type.unwrap(),
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn chore_to_homework(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None || patch.course == None || patch.dueDate == None || patch.details == None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: patch.task_type.unwrap(),
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: patch.course,
+        dueDate: patch.dueDate,
+        details: patch.details
+    });
+}
+
+pub fn homework_to_task(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None || patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: patch.task_type.unwrap(),
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn homework_to_chore(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description == None || patch.size == None || patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: patch.description.or(existing_task.description),
+        size: patch.size.or(existing_task.size),
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn fetch_task_by_id_2(id: i64) -> Option<Json<Task>> {
+    //connect to sqllite
+    let db_connection = match Connection::open("data.sqlite") {
+        Ok(connection) => connection, //returns connection if success
+        Err(_) => {return None;}
+    };
 
 
-//     let mut statement = match db_connection.prepare(&format!("select * from tasks where id = {};",[&id][0])) { 
-//         Ok(statement) => statement,
-//         Err(_) => {return None;}//else prints error
-//     };
+    let mut statement = match db_connection.prepare(&format!("select * from tasks where id = {};",[&id][0])) { 
+        Ok(statement) => statement,
+        Err(_) => {return None;}//else prints error
+    };
 
     
-//     let results = statement.query_map(rusqlite::NO_PARAMS, |row| {
-//         Ok(Task {
-//             id: row.get(0)?,
-//             ownerId: row.get(1)?,
-//             task_type: row.get(2)?,
-//             status: row.get(3)?,
-//             description: row.get(4)?,
-//             size: row.get(5)?,
-//             course: row.get(6)?,
-//             dueDate: row.get(7)?,
-//             details: row.get(8)?,
-//              })
-//         });
+    let results = statement.query_map(rusqlite::NO_PARAMS, |row| {
+        Ok(Task {
+            id: row.get(0)?,
+            ownerId: row.get(1)?,
+            task_type: row.get(2)?,
+            status: row.get(3)?,
+            description: row.get(4)?,
+            size: row.get(5)?,
+            course: row.get(6)?,
+            dueDate: row.get(7)?,
+            details: row.get(8)?,                                                                                                        
+             })
+        });
     
         
     
-//         match results {
-//             Ok(rows) =>{ 
-//                 let collection: rusqlite::Result<Vec<Task>> = rows.collect();
+        match results {
+            Ok(rows) =>{ 
+                let collection: rusqlite::Result<Vec<Task>> = rows.collect();
     
-//                 match collection {
-//                     Ok(tasks) => { if(tasks.len() == 0) { return None; } Some(Json(tasks[0]))},
-//                     Err(why) => None
-//                 }
-//             }
+                match collection {
+                    Ok(tasks) => { if(tasks.len() == 0) { return None; } Some(Json(tasks[0].clone()))},
+                    Err(why) => None
+                }
+            }
                 
-//             Err(err) => {return None;}
-//         }
-// }
+            Err(err) => {return None;}
+        }
+}
 
 pub fn fetch_task_by_id(id: i64) -> Result<Json<Tasks>, String> {
     //connect to sqllite
@@ -268,12 +436,7 @@ pub fn fetch_status(id: i64) -> Result<Json<String>, String> {
             match collection {
                 Ok(tasks) => { 
                     let task = &tasks[0];
-                    let status_opt = &task.status;
-                    let status = 
-                    match status_opt {
-                        Some(t) => t,
-                        None => return Err("Incorrect data type sent".into()),
-                    };
+                    let status = &task.status;
 
                     Ok(Json(status.to_string())) }
                 Err(_) => Err("Could not collect tasks".into()),
@@ -524,9 +687,7 @@ pub fn add_homework_to_person(owner_id: i64, task:Json<TaskRaw>) -> Result<Json<
     }
 }
 
-
-pub fn change_task(id:i64, task:Json<TaskPatch>)  -> Result<Json<StatusMessage>, String> {
-    //connection
+pub fn change_task(id:i64, patch:Json<TaskPatch>) -> Result<Json<StatusMessage>, String> {
 
     let db_connection = match Connection::open("data.sqlite") {
         Ok(connection) => connection,
@@ -535,134 +696,41 @@ pub fn change_task(id:i64, task:Json<TaskPatch>)  -> Result<Json<StatusMessage>,
         }
     };
 
-    let change_task = task.0; 
+    let existing_task_opt = fetch_task_by_id_2(id);
 
-    // task_type: Option<TaskType>,
-    // status: Option<String>, //Active or Done
-    // description: Option<String>,
-    // size: Option<String>, //Small, Medium or Large
-    // course: Option<String>,
-    // dueDate: Option<String>, // Date
-    // details: Option<String>,
+    let existing_task =
+    match existing_task_opt{
+        Some(t) => t,
+        None => { return Err("Illegal value from GET".to_string()); }
+    };
 
-    let check_task_type = change_task.task_type;
-    let check_status = change_task.status;
+    let change_opt = patch_by_case(patch, existing_task);
+    let change = 
+    match change_opt{
+        Some(t) => t,
+        None => { return Err("Illegal patch".to_string()); }
+    };
 
-    let check_description = change_task.description;
-    let check_size = change_task.size;
-
-    let check_course = change_task.course;
-    let check_dueDate = change_task.dueDate;
-    let check_details = change_task.details;
-
-    let check_task_type_flag = false;
-    let check_status_flag = false;
-
-    let check_description_flag = false;
-    let check_size_flag = false;
-
-    let check_course_flag = false;
-    let check_dueDate_flag = false;
-    let check_details_flag = false;
-
-
-    // let task_type =
-    // match check_task_type {
-    //     Some(t) => {check_task_type_flag = true; 
-    //         match t {
-    //         TaskType::Task => "Task".to_string(),
-    //         TaskType::Chore => "Chore".to_string(),
-    //         TaskType::Homework => "Homework".to_string(),}
-    //     },
-    //     None => "".to_string(),
-    // };
-
-    // let status =
-    // match check_status {
-    //     Some(t) => {check_status_flag = true; t},
-    //     None => "".to_string(),
-    // };
-
-    // let description =
-    // match check_description {
-    //     Some(t) => {check_description_flag = true; t},
-    //     None => "".to_string()
-    // };
-
-    // let size =
-    // match check_size {
-    //     Some(t) => {check_size_flag = true; t},
-    //     None => "".to_string()
-    // };
-
-    // let course =
-    // match check_course {
-    //     Some(t) => {check_course_flag = true; t},
-    //     None => "".to_string()
-    // };
-
-    // let dueDate =
-    // match check_dueDate {
-    //     Some(t) => {check_dueDate_flag = true; t},
-    //     None => "".to_string()
-    // };
-
-    // let details =
-    // match check_details {
-    //     Some(t) => {check_details_flag = true; t},
-    //     None => "".to_string()
-    // };
-
-    Ok(Json(StatusMessage { message: "finished!".to_string()}))
-}
-
-// pub fn patch_task(id:i64, task:Json<TaskPatch>) -> Option<Json<Task>> {
-
-//     let db_connection = match Connection::open("data.sqlite") {
-//         Ok(connection) => connection,
-//         Err(_) => {
-//             return None;
-//         }
-//     };
-
-//     let existing_task = fetch_task_by_id_2(id)?.0; //Unwrap JSON
-
-//     return Some(Json(Task{
-//         id: id,
-//         ownerId: existing_task.ownerId,
-//         task_type: task.task_type,
-//         status: task.status.or(existing_task.status),
-//         description: task.description,
-//         size: task.size, //Small, Medium or Large
-//         course: task.course,
-//         dueDate: task.dueDate, // Date
-//         details: task.details,
-//     }))
+    println!("Change task type: {0}", type_to_string(change.task_type));
     
+    let mut statement =
+        match db_connection.prepare("UPDATE tasks SET task_type = (?1), status = (?2), description = (?3), size = (?4), 
+        course = (?5), dueDate = (?6), details = (?7) WHERE id = (?8); ") {
+            Ok(statement) => statement,
+            Err(_) => return Err("Failed to prepare query".into()),
+        }; 
 
+        let results = statement.execute([&type_to_string(change.task_type) as &dyn ToSql, &change.status,
+        &change.description, &change.size, &change.course, &change.dueDate, &change.details, &id.to_string()]);
 
-// }
-
-pub fn remove_person(id: i64) -> Result<Json<StatusMessage>, String> {
-    let db_connection = match Connection::open("data.sqlite") {
-        Ok(connection) => connection,
-        Err(_) => {
-            return Err(String::from("Failed to connect to database"));
-        }
-    };
-
-    let mut statement = match db_connection.prepare("delete from people where id = $1;") {
-        Ok(statement) => statement,
-        Err(_) => return Err("Failed to prepare query".into()),
-    };
-    let results = statement.execute(&[&id]);
-
-    match results {
-        Ok(rows_affected) => Ok(Json(StatusMessage {
-            message: format!("{} rows deleted!", rows_affected),
-        })),
-        Err(_) => Err("Failed to delete person".into()),
-    }
+        match results {
+            Ok(rows_affected) => Ok(Json(StatusMessage {
+                message: format!("{} rows updated!", rows_affected),
+            })),
+            Err(err) => Err(format!("{:?}", err))   
+        };
+    
+    Ok(Json(StatusMessage { message: "finished!".to_string()}))
 }
 
 pub fn remove_task(id: i64) -> Result<Json<StatusMessage>, String> {

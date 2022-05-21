@@ -194,6 +194,14 @@ pub fn patch_by_case(Json(patch): Json<TaskPatch>, Json(existing_task): Json<Tas
     if(existing_type == TaskType::Homework && patch_type == Some(TaskType::Homework) || patch_type == None ){
         return homework_to_homework(patch.clone(), existing_task.clone());
     }
+    //Existing = Task, Patch = Chore;
+    if(existing_type == TaskType::Task && patch_type == Some(TaskType::Chore)){
+        return task_to_chore(patch.clone(), existing_task.clone());
+    }
+    //Existing = Task, Patch = Homework;
+    if(existing_type == TaskType::Task && patch_type == Some(TaskType::Homework)){
+        return task_to_homework(patch.clone(), existing_task.clone());
+    }
     //Existing = Chore, Patch = Task;
     if(existing_type == TaskType::Chore && patch_type == Some(TaskType::Task)){
         return chore_to_task(patch.clone(), existing_task.clone());
@@ -252,6 +260,40 @@ pub fn chore_to_chore(patch: TaskPatch, existing_task: Task) -> Option<Task>{
 }
 
 pub fn homework_to_homework(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description != None || patch.size != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: None,
+        size: None,
+        course: patch.course.or(existing_task.course),
+        dueDate: patch.dueDate.or(existing_task.dueDate),
+        details: patch.details.or(existing_task.details)
+    });
+}
+
+pub fn task_to_chore(patch: TaskPatch, existing_task: Task) -> Option<Task>{
+    if(patch.description == None || patch.size == None || patch.course != None || patch.dueDate != None || patch.details != None){
+        return None;
+    }
+    return Some(Task{
+        id: existing_task.id,
+        ownerId: existing_task.ownerId,
+        task_type: existing_task.task_type,
+        status: patch.status.unwrap_or(existing_task.status),
+        description: patch.description.or(existing_task.description),
+        size: patch.size.or(existing_task.size),
+        course: None,
+        dueDate: None,
+        details: None
+    });
+}
+
+pub fn task_to_homework(patch: TaskPatch, existing_task: Task) -> Option<Task>{
     if(patch.description != None || patch.size != None){
         return None;
     }
@@ -783,8 +825,6 @@ pub fn change_task(id:i64, patch:Json<TaskPatch>) -> Result<Json<StatusMessage>,
         Some(t) => t,
         None => { return Err("Illegal patch".to_string()); }
     };
-
-    println!("Change task type: {0}", type_to_string(change.task_type));
     
     let mut statement =
         match db_connection.prepare("UPDATE tasks SET task_type = (?1), status = (?2), description = (?3), size = (?4), 

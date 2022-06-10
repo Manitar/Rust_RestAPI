@@ -167,27 +167,27 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
     let check_email = change_person.email;
     let check_favoriteProgrammingLanguage = change_person.favoriteProgrammingLanguage;
 
-    let check_name_flag = false;
-    let check_email_flag = false;
-    let check_favoriteProgrammingLanguage_flag = false;
+    let mut check_name_flag = false;
+    let mut check_email_flag = false;
+    let mut check_favoriteProgrammingLanguage_flag = false;
 
-    // let name =
-    // match check_name {
-    //     Some(t) => {check_name_flag = true; t},
-    //     None =>  "".to_string(),
-    // };
+    let name =
+    match check_name {
+        Some(t) => {check_name_flag = true; t},
+        None =>  "".to_string(),
+    };
 
-    // let email =
-    // match check_email {
-    //     Some(t) => {check_email_flag = true; t},
-    //     None =>  "".to_string(),
-    // };
+    let email =
+    match check_email {
+        Some(t) => {check_email_flag = true; t},
+        None =>  "".to_string(),
+    };
 
-    // let favoriteProgrammingLanguage =
-    // match check_favoriteProgrammingLanguage {
-    //     Some(t) => {check_favoriteProgrammingLanguage_flag = true; t},
-    //     None =>  "".to_string(),
-    // };
+    let favoriteProgrammingLanguage =
+    match check_favoriteProgrammingLanguage {
+        Some(t) => {check_favoriteProgrammingLanguage_flag = true; t},
+        None =>  "".to_string(),
+    };
 
 
 
@@ -198,7 +198,7 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute(["".to_string() , id.to_string()]);
+        let results = statement.execute([name.to_string() , id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {
@@ -214,7 +214,7 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute(["".to_string(), id.to_string()]);
+        let results = statement.execute([email.to_string(), id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {
@@ -230,7 +230,7 @@ pub fn change_person(id:i64 ,person:Json<PersonPatch>)  -> Result<Json<StatusMes
             Err(_) => return Err("Failed to prepare query".into()),
         }; 
 
-        let results = statement.execute(["".to_string(), id.to_string()]);
+        let results = statement.execute([favoriteProgrammingLanguage.to_string(), id.to_string()]);
 
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {

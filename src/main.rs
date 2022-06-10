@@ -19,6 +19,10 @@ use crate::Task::TaskPatch as OtherTaskPatch;
 use crate::Task::TaskType;
 use crate::Task::Tasks;
 
+use rocket::http::Header;
+use rocket::{Request, Response};
+use rocket::fairing::{Fairing, Info, Kind};
+
 
 
 #[get("/")]
@@ -134,6 +138,8 @@ fn remove_task(id: i64) -> Result<Json<StatusMessage>, String> {
     Task::remove_task(id)
 }
 
+use rocket::http::Method;
+use rocket_cors::{AllowedOrigins, CorsOptions};
 
 fn main() {
     {
@@ -172,12 +178,24 @@ fn main() {
     }
 
 
+
+    let cors = CorsOptions::default()
+    .allowed_origins(AllowedOrigins::all())
+    .allowed_methods(
+        vec![Method::Get, Method::Post, Method::Patch, Method::Put, Method::Delete]
+            .into_iter()
+            .map(From::from)
+            .collect(),
+    )
+    .allow_credentials(true);
+
+
     rocket::ignite()
         .mount(
             "/api",
             routes![index, fetch_all_people, add_person, remove_person, fetch_person, change_person, get_tasks_of_person,
                         get_task, add_task, change_task, remove_task, get_task_status, get_task_ownerId, put_status, put_ownerId]
-        )
+        ).attach(cors.to_cors().unwrap())
         .launch();
 }
 

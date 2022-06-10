@@ -10,9 +10,8 @@ When I write id, type in the actual id used in the objects. Person id for people
  
 To do list:
 1) Check in postman: PATCH: All 9 different types, and the whole API.
-2) Make macros for repeating things: Connection and such.
-3) Make enums for Status, Size.
-4) Case sensitivity for Chore, Task, Homework??
+2) Case sensitivity for Chore, Task, Homework??
+3) Case sensitivity for Active, Done: Put status "active" works, while get and post "active" doesn't work, because of small letter.
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default

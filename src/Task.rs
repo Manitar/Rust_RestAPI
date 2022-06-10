@@ -513,6 +513,51 @@ pub fn fetch_tasks_by_person(id: i64) -> Result<Json<Tasks>, String> {
     }
 }
 
+pub fn fetch_tasks_by_person_status(id: i64, status: String) -> Result<Json<Tasks>, String> {
+    //connect to sqllite
+    let db_connection = match Connection::open("data.sqlite") {
+        Ok(connection) => connection, //returns connection if success
+        Err(_) => {
+            return Err(String::from("Failed to connect to database"));//else prints error
+        }
+    };
+
+    let mut statement = match db_connection.prepare(&format!("select * from tasks where ownerId = {0} and status = \"{1}\";",[&id][0], status.to_string())) { 
+        Ok(statement) => statement,
+        Err(_) => return Err("Failed to prepare query".into()),//else prints error
+    };
+
+
+    let results = statement.query_map(rusqlite::NO_PARAMS, |row| {
+    Ok(Task {
+        id: row.get(0)?,
+        ownerId: row.get(1)?,
+        task_type: row.get(2)?,
+        status: row.get(3)?,
+        description: row.get(4)?,
+        size: row.get(5)?,
+        course: row.get(6)?,
+        dueDate: row.get(7)?,
+        details: row.get(8)?,
+         })
+    });
+
+    
+
+    match results {
+        Ok(rows) =>{ 
+            let collection: rusqlite::Result<Vec<Task>> = rows.collect();
+
+            match collection {
+                Ok(tasks) => { Ok(Json(Tasks{tasks}))},
+                Err(why) => Err(format!("Could not collect tasks: {why}"))
+            }
+        }
+            
+        Err(err) => Err(format!("{:?}", err))
+    }
+}
+
 pub fn fetch_status(id: i64) -> Result<Json<String>, String> {
 
     //connect to sqllite
@@ -618,22 +663,24 @@ pub fn put_status(id: i64, status: Json<String>) -> Result<Json<StatusMessage>, 
             }
         };
         let check1 = status.0;
-        if !check1.eq("") {
-            let mut statement =
-            match db_connection.prepare("UPDATE tasks SET status = (?1) WHERE id = (?2); ") {
-                Ok(statement) => statement,
-                Err(_) => return Err("Failed to prepare query".into()),
-            }; 
-    
-            let results = statement.execute([check1.to_string(), id.to_string()]);
-    
-            match results {
-                Ok(rows_affected) => Ok(Json(StatusMessage {
-                    message: format!("{} rows updated!", rows_affected),
-                })),
-                Err(err) => Err(format!("{:?}", err))   
-            };
+        println!("Status = {0}", check1);
+        if !check1.eq("Active") && !check1.eq("Done") {
+            return Err("No such status".into());
         }
+        let mut statement =
+        match db_connection.prepare("UPDATE tasks SET status = (?1) WHERE id = (?2);") {
+            Ok(statement) => statement,
+            Err(_) => return Err("Failed to prepare query".into()),
+        }; 
+
+        let results = statement.execute([check1, id.to_string()]);
+
+        match results {
+            Ok(rows_affected) => Ok(Json(StatusMessage {
+                message: format!("{} rows updated!", rows_affected),
+            })),
+            Err(err) => Err(format!("{:?}", err))   
+        };
         Ok(Json(StatusMessage { message: "finished!".to_string()}))
     }
 

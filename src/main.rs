@@ -18,6 +18,7 @@ use crate::Task::TaskRaw as OtherTaskRaw;
 use crate::Task::TaskPatch as OtherTaskPatch;
 use crate::Task::TaskType;
 use crate::Task::Tasks;
+use crate::Task::Status;
 
 use rocket::http::Header;
 use rocket::{Request, Response};
@@ -54,10 +55,27 @@ fn fetch_person(id: i64) -> Result<Json<OtherPerson>, String> {
 //     }
 // }
 
+
+
+#[get("/people/<id>/tasks?<status>")]
+fn get_tasks_of_person_status(id: i64, status: String) -> Result<Json<Tasks>, String> {
+    let mut status_upper = "".to_string();
+    if(status == "active".to_string()){
+        status_upper = "Active".to_string();
+    }
+    if(status == "done".to_string()){
+        status_upper = "Done".to_string();
+    }
+    Task::fetch_tasks_by_person_status(id, status_upper)
+}
+
+
+
 #[get("/people/<id>/tasks")]
 fn get_tasks_of_person(id: i64) -> Result<Json<Tasks>, String> {
     Task::fetch_tasks_by_person(id)
 }
+
 
 #[get("/tasks/<id>")]
 fn get_task(id: i64) -> Result<Json<OtherTask>, String> {
@@ -193,7 +211,7 @@ fn main() {
     rocket::ignite()
         .mount(
             "/api",
-            routes![index, fetch_all_people, add_person, remove_person, fetch_person, change_person, get_tasks_of_person,
+            routes![index, fetch_all_people, add_person, remove_person, fetch_person, change_person, get_tasks_of_person, get_tasks_of_person_status,
                         get_task, add_task, change_task, remove_task, get_task_status, get_task_ownerId, put_status, put_ownerId]
         ).attach(cors.to_cors().unwrap())
         .launch();

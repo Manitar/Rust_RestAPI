@@ -12,6 +12,8 @@ To do list:
 1) Check in postman: PATCH: All 9 different types, and the whole API.
 2) Case sensitivity for Chore, Task, Homework??
 3) Case sensitivity for Active, Done: Put status "active" works, while get and post "active" doesn't work, because of small letter.
+4) Put status and put ownerId not working.
+5) Tests left: Put status, put ownerId, get ownerId, patch task.
  
 Swagger link:
 https://mbarsinai.com/files/bgu/2022a/miniproj/swagger/#/default

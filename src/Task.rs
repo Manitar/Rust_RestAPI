@@ -183,15 +183,15 @@ pub fn patch_by_case(Json(patch): Json<TaskPatch>, Json(existing_task): Json<Tas
     let patch_type = patch.task_type.clone();
 
     //Existing = Task, Patch = Task;
-    if(existing_type == TaskType::Task && patch_type == Some(TaskType::Task) || patch_type == None){
+    if(existing_type == TaskType::Task && (patch_type == Some(TaskType::Task) || patch_type == None)){
         return task_to_task(patch.clone(), existing_task.clone());
     }
     //Existing = Chore, Patch = Chore;
-    if(existing_type == TaskType::Chore && patch_type == Some(TaskType::Chore) || patch_type == None ){
+    if(existing_type == TaskType::Chore && (patch_type == Some(TaskType::Chore) || patch_type == None) ){
         return chore_to_chore(patch.clone(), existing_task.clone());
     }
     //Existing = Homework, Patch = Homework;
-    if(existing_type == TaskType::Homework && patch_type == Some(TaskType::Homework) || patch_type == None ){
+    if(existing_type == TaskType::Homework && (patch_type == Some(TaskType::Homework) || patch_type == None) ){
         return homework_to_homework(patch.clone(), existing_task.clone());
     }
     //Existing = Task, Patch = Chore;
@@ -595,6 +595,9 @@ pub fn fetch_status(id: i64) -> Result<Json<String>, String> {
 
             match collection {
                 Ok(tasks) => { 
+                    if(tasks.len() == 0){
+                        return Err("No task has been found".into());
+                    }
                     let task = &tasks[0];
                     let status = task.status;
 
@@ -643,6 +646,10 @@ pub fn fetch_ownerId(id: i64) -> Result<Json<String>, String> {
 
             match collection {
                 Ok(tasks) => { 
+                    if(tasks.len() == 0){
+                        return Err("No task has been found".into());
+                    }
+                    
                     let task = &tasks[0];
                     let owner_id = &task.ownerId.to_string();
                     Ok(Json(owner_id.to_string())) }
@@ -674,7 +681,7 @@ pub fn put_status(id: i64, status: Json<String>) -> Result<Json<StatusMessage>, 
         }; 
 
         let results = statement.execute([check1, id.to_string()]);
-
+        
         match results {
             Ok(rows_affected) => Ok(Json(StatusMessage {
                 message: format!("{} rows updated!", rows_affected),
@@ -692,6 +699,7 @@ pub fn put_ownerId(id: i64, ownerId: Json<String>) -> Result<Json<StatusMessage>
             return Err(String::from("Failed to connect to database"));
         }
     };
+    let mut success = true;
     let check1 = ownerId.0;
     if !check1.eq("") {
         let mut statement =
@@ -706,8 +714,11 @@ pub fn put_ownerId(id: i64, ownerId: Json<String>) -> Result<Json<StatusMessage>
             Ok(rows_affected) => Ok(Json(StatusMessage {
                 message: format!("{} rows updated!", rows_affected),
             })),
-            Err(err) => Err(format!("{:?}", err))   
+            Err(err) => {success = false; Err(format!("{:?}", err)) } 
         };
+    }
+    if(success == false){
+        return Ok(Json(StatusMessage { message: "Failed to change owner ID".to_string()}));
     }
     Ok(Json(StatusMessage { message: "finished!".to_string()}))
 }
